@@ -1,0 +1,121 @@
+import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
+import 'package:salespro/admin/mock_data.dart';
+import 'package:salespro/admin/models/order.dart';
+
+class OrderListScreen extends StatefulWidget {
+  const OrderListScreen({super.key});
+
+  @override
+  _OrderListScreenState createState() => _OrderListScreenState();
+}
+
+class _OrderListScreenState extends State<OrderListScreen> {
+  late List<Order> _orders;
+  OrderStatus? _selectedStatus;
+
+  @override
+  void initState() {
+    super.initState();
+    _orders = List.from(mockOrders);
+  }
+
+  Color _getStatusColor(OrderStatus status) {
+    switch (status) {
+      case OrderStatus.Pending:
+        return Colors.orange;
+      case OrderStatus.Confirmed:
+        return Colors.blue;
+      case OrderStatus.Delivered:
+        return Colors.green;
+      case OrderStatus.Cancelled:
+        return Colors.red;
+    }
+  }
+
+  String _getStatusText(OrderStatus status) {
+    return status.toString().split('.').last;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final filteredOrders = _selectedStatus == null
+        ? _orders
+        : _orders.where((order) => order.status == _selectedStatus).toList();
+
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Orders',
+            style: Theme.of(context).textTheme.headlineMedium,
+          ),
+          const SizedBox(height: 20),
+          Wrap(
+            spacing: 8.0,
+            children: OrderStatus.values.map((status) {
+              return ChoiceChip(
+                label: Text(_getStatusText(status)),
+                selected: _selectedStatus == status,
+                onSelected: (selected) {
+                  setState(() {
+                    _selectedStatus = selected ? status : null;
+                  });
+                },
+                selectedColor: _getStatusColor(status).withOpacity(0.3),
+              );
+            }).toList(),
+          ),
+          const SizedBox(height: 20),
+          Expanded(
+            child: SizedBox(
+              width: double.infinity,
+              child: DataTable(
+                columns: const [
+                  DataColumn(label: Text('Order ID')),
+                  DataColumn(label: Text('Customer')),
+                  DataColumn(label: Text('Date')),
+                  DataColumn(label: Text('Total')),
+                  DataColumn(label: Text('Status')),
+                  DataColumn(label: Text('Actions')),
+                ],
+                rows: filteredOrders.map((order) {
+                  return DataRow(cells: [
+                    DataCell(Text(order.id)),
+                    DataCell(Text(order.customer.storeName)),
+                    DataCell(
+                        Text(DateFormat('dd/MM/yyyy').format(order.orderDate))),
+                    DataCell(Text('${order.totalAmount.toStringAsFixed(0)} ₫')),
+                    DataCell(
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: _getStatusColor(order.status),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          _getStatusText(order.status),
+                          style: const TextStyle(color: Colors.white),
+                        ),
+                      ),
+                    ),
+                    DataCell(IconButton(
+                      icon: const Icon(Icons.visibility, color: Colors.grey),
+                      onPressed: () {
+                        context.go('/admin/orders/${order.id}');
+                      },
+                    )),
+                  ]);
+                }).toList(),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

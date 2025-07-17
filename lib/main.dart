@@ -1,4 +1,6 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:salespro/admin/routes.dart';
 import 'login.dart';
 
 void main() {
@@ -10,10 +12,18 @@ class SalezmanApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      home: SplashScreen(),
-    );
+    if (kIsWeb) {
+      return MaterialApp.router(
+        title: 'SalesPro Admin',
+        routerConfig: adminRouter,
+        debugShowCheckedModeBanner: false,
+      );
+    } else {
+      return MaterialApp(
+        debugShowCheckedModeBanner: false,
+        home: SplashScreen(),
+      );
+    }
   }
 }
 
