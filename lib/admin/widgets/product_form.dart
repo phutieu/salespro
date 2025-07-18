@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:salespro/admin/models/product.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:math';
 
 class ProductForm extends StatefulWidget {
@@ -99,11 +100,10 @@ class _ProductFormState extends State<ProductForm> {
         ),
         ElevatedButton(
           child: const Text('Save'),
-          onPressed: () {
+          onPressed: () async {
             if (_formKey.currentState!.validate()) {
               final newProduct = Product(
-                id: widget.product?.id ??
-                    'SP${Random().nextInt(1000).toString().padLeft(3, '0')}',
+                id: widget.product?.id ?? '',
                 name: _nameController.text,
                 description: _descriptionController.text,
                 unit: _unitController.text,
@@ -113,7 +113,7 @@ class _ProductFormState extends State<ProductForm> {
                 stockQuantity: int.tryParse(_stockQuantityController.text) ?? 0,
                 category: _categoryController.text,
               );
-              widget.onSave(newProduct);
+              await widget.onSave(newProduct);
               Navigator.of(context).pop();
             }
           },

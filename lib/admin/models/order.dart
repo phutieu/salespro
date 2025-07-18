@@ -42,4 +42,41 @@ class Order {
     this.status = OrderStatus.Pending,
     this.payments = const [],
   });
+
+  factory Order.fromMap(Map<String, dynamic> map) {
+    return Order(
+      id: map['id'] ?? '',
+      customer: map['customer'] is Map<String, dynamic>
+          ? Customer.fromMap(map['customer'])
+          : Customer.fromMap({}),
+      items: (map['items'] as List<dynamic>? ?? [])
+          .map((item) => item is Map<String, dynamic>
+              ? OrderItem.fromMap(item)
+              : OrderItem.fromMap({}))
+          .toList(),
+      payments: (map['payments'] as List<dynamic>? ?? [])
+          .map((p) => p is Map<String, dynamic>
+              ? Payment.fromMap(p)
+              : Payment.fromMap({}))
+          .toList(),
+      orderDate: map['orderDate'] != null
+          ? DateTime.tryParse(map['orderDate']) ?? DateTime.now()
+          : DateTime.now(),
+      status: OrderStatus.values.firstWhere(
+        (e) => e.toString() == 'OrderStatus.' + (map['status'] ?? 'Pending'),
+        orElse: () => OrderStatus.Pending,
+      ),
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'customer': customer.toMap(),
+      'items': items.map((item) => item.toMap()).toList(),
+      'payments': payments.map((p) => p.toMap()).toList(),
+      'orderDate': orderDate.toIso8601String(),
+      'status': status.toString().split('.').last,
+    };
+  }
 }

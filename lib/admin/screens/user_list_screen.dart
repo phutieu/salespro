@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:salespro/admin/mock_data.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:salespro/admin/models/user.dart';
 import 'package:salespro/admin/widgets/user_form.dart';
 
@@ -11,40 +11,42 @@ class UserListScreen extends StatefulWidget {
 }
 
 class _UserListScreenState extends State<UserListScreen> {
-  late List<User> _users;
-
-  @override
-  void initState() {
-    super.initState();
-    _users = List.from(mockUsers);
-  }
-
-  void _showUserForm(BuildContext context, {User? user}) {
+  void _showUserForm(BuildContext context, {DocumentSnapshot? doc}) {
+    User? user;
+    if (doc != null) {
+      final data = doc.data() as Map<String, dynamic>;
+      user = User.fromMap(data..['id'] = doc.id);
+    }
     showDialog(
         context: context,
         builder: (BuildContext context) {
           return UserForm(
             user: user,
-            onSave: (savedUser) {
-              setState(() {
-                if (user == null) {
-                  _users.add(savedUser);
-                } else {
-                  final index = _users.indexWhere((u) => u.id == savedUser.id);
-                  if (index != -1) {
-                    _users[index] = savedUser;
-                  }
-                }
-              });
+            onSave: (savedUser) async {
+              if (doc == null) {
+                await FirebaseFirestore.instance
+                    .collection('users')
+                    .add(savedUser.toMap());
+              } else {
+                await FirebaseFirestore.instance
+                    .collection('users')
+                    .doc(doc.id)
+                    .update(savedUser.toMap());
+              }
+              setState(() {});
             },
           );
         });
   }
 
-  void _toggleUserStatus(User user) {
-    setState(() {
-      user.isActive = !user.isActive;
-    });
+  void _toggleUserStatus(DocumentSnapshot doc) async {
+    final data = doc.data() as Map<String, dynamic>;
+    final user = User.fromMap(data..['id'] = doc.id);
+    await FirebaseFirestore.instance
+        .collection('users')
+        .doc(doc.id)
+        .update({'isActive': !user.isActive});
+    setState(() {});
   }
 
   String _getRoleText(UserRole role) {
@@ -59,7 +61,7 @@ class _UserListScreenState extends State<UserListScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'User Management',
+            'Users',
             style: Theme.of(context).textTheme.headlineMedium,
           ),
           const SizedBox(height: 20),
@@ -76,53 +78,61 @@ class _UserListScreenState extends State<UserListScreen> {
           ),
           const SizedBox(height: 20),
           Expanded(
-            child: SizedBox(
-              width: double.infinity,
-              child: DataTable(
-                columns: const [
-                  DataColumn(label: Text('Name')),
-                  DataColumn(label: Text('Email')),
-                  DataColumn(label: Text('Role')),
-                  DataColumn(label: Text('Status')),
-                  DataColumn(label: Text('Actions')),
-                ],
-                rows: _users.map((user) {
-                  return DataRow(cells: [
-                    DataCell(Text(user.name)),
-                    DataCell(Text(user.email)),
-                    DataCell(Text(_getRoleText(user.role))),
-                    DataCell(
-                      Text(
-                        user.isActive ? 'Active' : 'Inactive',
-                        style: TextStyle(
-                          color: user.isActive ? Colors.green : Colors.red,
+            child: StreamBuilder<QuerySnapshot>(
+              stream:
+                  FirebaseFirestore.instance.collection('users').snapshots(),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData)
+                  return const Center(child: CircularProgressIndicator());
+                final docs = snapshot.data!.docs;
+                return DataTable(
+                  columns: const [
+                    DataColumn(label: Text('Name')),
+                    DataColumn(label: Text('Email')),
+                    DataColumn(label: Text('Role')),
+                    DataColumn(label: Text('Status')),
+                    DataColumn(label: Text('Actions')),
+                  ],
+                  rows: docs.map((doc) {
+                    final data = doc.data() as Map<String, dynamic>;
+                    final user = User.fromMap(data..['id'] = doc.id);
+                    return DataRow(cells: [
+                      DataCell(Text(user.name)),
+                      DataCell(Text(user.email)),
+                      DataCell(Text(_getRoleText(user.role))),
+                      DataCell(
+                        Text(
+                          user.isActive ? 'Active' : 'Inactive',
+                          style: TextStyle(
+                            color: user.isActive ? Colors.green : Colors.red,
+                          ),
                         ),
                       ),
-                    ),
-                    DataCell(Row(
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.edit, color: Colors.blue),
-                          onPressed: () {
-                            _showUserForm(context, user: user);
-                          },
-                        ),
-                        IconButton(
-                          icon: Icon(
-                            user.isActive
-                                ? Icons.lock_outline
-                                : Icons.lock_open,
-                            color: user.isActive ? Colors.red : Colors.green,
+                      DataCell(Row(
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.edit, color: Colors.blue),
+                            onPressed: () {
+                              _showUserForm(context, doc: doc);
+                            },
                           ),
-                          onPressed: () {
-                            _toggleUserStatus(user);
-                          },
-                        ),
-                      ],
-                    )),
-                  ]);
-                }).toList(),
-              ),
+                          IconButton(
+                            icon: Icon(
+                              user.isActive
+                                  ? Icons.lock_outline
+                                  : Icons.lock_open,
+                              color: user.isActive ? Colors.red : Colors.green,
+                            ),
+                            onPressed: () {
+                              _toggleUserStatus(doc);
+                            },
+                          ),
+                        ],
+                      )),
+                    ]);
+                  }).toList(),
+                );
+              },
             ),
           ),
         ],

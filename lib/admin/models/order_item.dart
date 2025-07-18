@@ -12,4 +12,24 @@ class OrderItem {
   });
 
   double get totalPrice => quantity * unitPrice;
+
+  factory OrderItem.fromMap(Map<String, dynamic> map) {
+    return OrderItem(
+      product: map['product'] is Map<String, dynamic>
+          ? Product.fromMap(map['product'])
+          : Product.fromMap({}),
+      quantity: map['quantity'] ?? 0,
+      unitPrice: (map['unitPrice'] is int)
+          ? (map['unitPrice'] as int).toDouble()
+          : (map['unitPrice'] ?? 0.0),
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'product': product.toMap(),
+      'quantity': quantity,
+      'unitPrice': unitPrice,
+    };
+  }
 }

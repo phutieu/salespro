@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:salespro/admin/mock_data.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:salespro/admin/models/customer.dart';
 import 'package:salespro/admin/widgets/customer_form.dart';
 
@@ -11,42 +11,41 @@ class CustomerListScreen extends StatefulWidget {
 }
 
 class _CustomerListScreenState extends State<CustomerListScreen> {
-  late List<Customer> _customers;
-
-  @override
-  void initState() {
-    super.initState();
-    _customers = List.from(mockCustomers);
-  }
-
-  void _showCustomerForm(BuildContext context, {Customer? customer}) {
+  void _showCustomerForm(BuildContext context, {DocumentSnapshot? doc}) {
+    Customer? customer;
+    if (doc != null) {
+      final data = doc.data() as Map<String, dynamic>;
+      customer = Customer.fromMap(data..['id'] = doc.id);
+    }
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return CustomerForm(
           customer: customer,
-          onSave: (savedCustomer) {
-            setState(() {
-              if (customer == null) {
-                _customers.add(savedCustomer);
-              } else {
-                final index =
-                    _customers.indexWhere((c) => c.id == savedCustomer.id);
-                if (index != -1) {
-                  _customers[index] = savedCustomer;
-                }
-              }
-            });
+          onSave: (savedCustomer) async {
+            if (doc == null) {
+              await FirebaseFirestore.instance
+                  .collection('customers')
+                  .add(savedCustomer.toMap());
+            } else {
+              await FirebaseFirestore.instance
+                  .collection('customers')
+                  .doc(doc.id)
+                  .update(savedCustomer.toMap());
+            }
+            setState(() {});
           },
         );
       },
     );
   }
 
-  void _deleteCustomer(String customerId) {
-    setState(() {
-      _customers.removeWhere((c) => c.id == customerId);
-    });
+  void _deleteCustomer(String docId) async {
+    await FirebaseFirestore.instance
+        .collection('customers')
+        .doc(docId)
+        .delete();
+    setState(() {});
   }
 
   @override
@@ -74,41 +73,50 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
           ),
           const SizedBox(height: 20),
           Expanded(
-            child: SizedBox(
-              width: double.infinity,
-              child: DataTable(
-                columns: const [
-                  DataColumn(label: Text('Customer ID')),
-                  DataColumn(label: Text('Store Name')),
-                  DataColumn(label: Text('Phone Number')),
-                  DataColumn(label: Text('Area')),
-                  DataColumn(label: Text('Actions')),
-                ],
-                rows: _customers.map((customer) {
-                  return DataRow(cells: [
-                    DataCell(Text(customer.id)),
-                    DataCell(Text(customer.storeName)),
-                    DataCell(Text(customer.phoneNumber)),
-                    DataCell(Text(customer.area)),
-                    DataCell(Row(
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.edit, color: Colors.blue),
-                          onPressed: () {
-                            _showCustomerForm(context, customer: customer);
-                          },
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.delete, color: Colors.red),
-                          onPressed: () {
-                            _deleteCustomer(customer.id);
-                          },
-                        ),
-                      ],
-                    )),
-                  ]);
-                }).toList(),
-              ),
+            child: StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance
+                  .collection('customers')
+                  .snapshots(),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData)
+                  return const Center(child: CircularProgressIndicator());
+                final docs = snapshot.data!.docs;
+                return DataTable(
+                  columns: const [
+                    DataColumn(label: Text('Customer ID')),
+                    DataColumn(label: Text('Store Name')),
+                    DataColumn(label: Text('Phone Number')),
+                    DataColumn(label: Text('Area')),
+                    DataColumn(label: Text('Actions')),
+                  ],
+                  rows: docs.map((doc) {
+                    final data = doc.data() as Map<String, dynamic>;
+                    final customer = Customer.fromMap(data..['id'] = doc.id);
+                    return DataRow(cells: [
+                      DataCell(Text(customer.id)),
+                      DataCell(Text(customer.storeName)),
+                      DataCell(Text(customer.phoneNumber)),
+                      DataCell(Text(customer.area)),
+                      DataCell(Row(
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.edit, color: Colors.blue),
+                            onPressed: () {
+                              _showCustomerForm(context, doc: doc);
+                            },
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.delete, color: Colors.red),
+                            onPressed: () {
+                              _deleteCustomer(doc.id);
+                            },
+                          ),
+                        ],
+                      )),
+                    ]);
+                  }).toList(),
+                );
+              },
             ),
           ),
         ],
