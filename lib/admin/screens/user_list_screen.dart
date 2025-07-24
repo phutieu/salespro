@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart' as auth;
 import 'package:salespro/admin/models/user.dart';
 import 'package:salespro/admin/widgets/user_form.dart';
 
@@ -24,9 +25,30 @@ class _UserListScreenState extends State<UserListScreen> {
             user: user,
             onSave: (savedUser) async {
               if (doc == null) {
-                await FirebaseFirestore.instance
-                    .collection('users')
-                    .add(savedUser.toMap());
+                // Tạo user trên Firebase Auth với password mặc định
+                try {
+                  final userCredential = await auth.FirebaseAuth.instance
+                      .createUserWithEmailAndPassword(
+                    email: savedUser.email,
+                    password: '123456',
+                  );
+                  final authUser = userCredential.user;
+                  if (authUser != null) {
+                    await FirebaseFirestore.instance
+                        .collection('users')
+                        .doc(authUser.uid)
+                        .set(savedUser.toMap()..['id'] = authUser.uid);
+                  }
+                } on auth.FirebaseAuthException catch (e) {
+                  String message = 'Lỗi tạo tài khoản';
+                  if (e.code == 'email-already-in-use') {
+                    message = 'Email đã tồn tại trên hệ thống!';
+                  }
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(message)),
+                  );
+                  return;
+                }
               } else {
                 await FirebaseFirestore.instance
                     .collection('users')

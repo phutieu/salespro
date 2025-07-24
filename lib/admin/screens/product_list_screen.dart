@@ -11,6 +11,51 @@ class ProductListScreen extends StatefulWidget {
 }
 
 class _ProductListScreenState extends State<ProductListScreen> {
+  static const int pageSize = 10;
+  List<DocumentSnapshot> products = [];
+  DocumentSnapshot? lastDoc;
+  List<DocumentSnapshot> prevDocs = [];
+  bool hasMore = true;
+  bool isLoading = false;
+  int currentPage = 1;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchProducts();
+  }
+
+  Future<void> _fetchProducts({bool next = false, bool prev = false}) async {
+    if (isLoading) return;
+    setState(() => isLoading = true);
+
+    Query query = FirebaseFirestore.instance
+        .collection('products')
+        .orderBy('name')
+        .limit(pageSize);
+
+    if (next && lastDoc != null) {
+      query = query.startAfterDocument(lastDoc!);
+    } else if (prev && prevDocs.isNotEmpty) {
+      query = query.startAtDocument(prevDocs.last);
+    }
+
+    final snapshot = await query.get();
+    setState(() {
+      if (next) {
+        currentPage++;
+        prevDocs.add(products.isNotEmpty ? products.first : lastDoc!);
+      } else if (prev && currentPage > 1) {
+        currentPage--;
+        if (prevDocs.isNotEmpty) prevDocs.removeLast();
+      }
+      products = snapshot.docs;
+      lastDoc = snapshot.docs.isNotEmpty ? snapshot.docs.last : lastDoc;
+      hasMore = snapshot.docs.length == pageSize;
+      isLoading = false;
+    });
+  }
+
   void _showProductForm(BuildContext context, {DocumentSnapshot? doc}) {
     Product? product;
     if (doc != null) {
@@ -24,12 +69,10 @@ class _ProductListScreenState extends State<ProductListScreen> {
           product: product,
           onSave: (savedProduct) async {
             if (doc == null) {
-              // Add new product
               await FirebaseFirestore.instance
                   .collection('products')
                   .add(savedProduct.toMap());
             } else {
-              // Edit existing product
               await FirebaseFirestore.instance
                   .collection('products')
                   .doc(doc.id)
@@ -72,50 +115,63 @@ class _ProductListScreenState extends State<ProductListScreen> {
           ),
           const SizedBox(height: 20),
           Expanded(
-            child: StreamBuilder<QuerySnapshot>(
-              stream:
-                  FirebaseFirestore.instance.collection('products').snapshots(),
-              builder: (context, snapshot) {
-                if (!snapshot.hasData)
-                  return const Center(child: CircularProgressIndicator());
-                final docs = snapshot.data!.docs;
-                return DataTable(
-                  columns: const [
-                    DataColumn(label: Text('Product ID')),
-                    DataColumn(label: Text('Name')),
-                    DataColumn(label: Text('Sale Price')),
-                    DataColumn(label: Text('Stock')),
-                    DataColumn(label: Text('Actions')),
-                  ],
-                  rows: docs.map((doc) {
-                    final data = doc.data() as Map<String, dynamic>;
-                    final product = Product.fromMap(data..['id'] = doc.id);
-                    return DataRow(cells: [
-                      DataCell(Text(product.id)),
-                      DataCell(Text(product.name)),
-                      DataCell(Text(product.salePrice.toStringAsFixed(0))),
-                      DataCell(Text(product.stockQuantity.toString())),
-                      DataCell(Row(
-                        children: [
-                          IconButton(
-                            icon: const Icon(Icons.edit, color: Colors.blue),
-                            onPressed: () {
-                              _showProductForm(context, doc: doc);
-                            },
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.delete, color: Colors.red),
-                            onPressed: () {
-                              _deleteProduct(doc.id);
-                            },
-                          ),
-                        ],
-                      )),
-                    ]);
-                  }).toList(),
-                );
-              },
-            ),
+            child: isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : DataTable(
+                    columns: const [
+                      DataColumn(label: Text('Product ID')),
+                      DataColumn(label: Text('Name')),
+                      DataColumn(label: Text('Sale Price')),
+                      DataColumn(label: Text('Stock')),
+                      DataColumn(label: Text('Actions')),
+                    ],
+                    rows: products.map((doc) {
+                      final data = doc.data() as Map<String, dynamic>;
+                      final product = Product.fromMap(data..['id'] = doc.id);
+                      return DataRow(cells: [
+                        DataCell(Text(product.id)),
+                        DataCell(Text(product.name)),
+                        DataCell(Text(product.salePrice.toStringAsFixed(0))),
+                        DataCell(Text(product.stockQuantity.toString())),
+                        DataCell(Row(
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.edit, color: Colors.blue),
+                              onPressed: () {
+                                _showProductForm(context, doc: doc);
+                              },
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.delete, color: Colors.red),
+                              onPressed: () {
+                                _deleteProduct(doc.id);
+                              },
+                            ),
+                          ],
+                        )),
+                      ]);
+                    }).toList(),
+                  ),
+          ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              ElevatedButton(
+                onPressed: currentPage > 1 && !isLoading
+                    ? () => _fetchProducts(prev: true)
+                    : null,
+                child: const Text('Trang trước'),
+              ),
+              const SizedBox(width: 16),
+              Text('Trang $currentPage'),
+              const SizedBox(width: 16),
+              ElevatedButton(
+                onPressed: hasMore && !isLoading
+                    ? () => _fetchProducts(next: true)
+                    : null,
+                child: const Text('Trang sau'),
+              ),
+            ],
           ),
         ],
       ),
