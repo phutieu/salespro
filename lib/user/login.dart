@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 // import 'package:cloud_firestore/cloud_firestore.dart'; // Không cần nếu chỉ dùng Auth
 import 'home_screen.dart';
 
@@ -15,6 +16,24 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkLoggedIn();
+    });
+  }
+
+  Future<void> _checkLoggedIn() async {
+    final prefs = await SharedPreferences.getInstance();
+    final isLoggedIn = prefs.getBool('isLoggedIn') ?? false;
+    if (isLoggedIn && mounted) {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => HomeScreen()),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -160,11 +179,12 @@ class _LoginScreenState extends State<LoginScreen> {
         email: email,
         password: password,
       );
+      // Lưu trạng thái đăng nhập
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('isLoggedIn', true);
       // Đăng nhập thành công, chuyển sang HomeScreen
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(
-            builder: (_) =>
-                HomeScreen()), // Thay HomeScreen bằng màn hình home thực tế của bạn
+        MaterialPageRoute(builder: (_) => HomeScreen()),
       );
     } on FirebaseAuthException catch (e) {
       String message = 'Đăng nhập thất bại';
