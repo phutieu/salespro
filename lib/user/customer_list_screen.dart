@@ -3,6 +3,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'custom_bottom_nav_bar.dart' as nav;
 import 'home_screen.dart';
 import 'order_list_screen.dart';
+import 'dialogs/add_customer_dialog.dart';
+import 'screens/customer_detail_screen.dart';
 
 class KPIScreen extends StatelessWidget {
   const KPIScreen({super.key});
@@ -68,7 +70,10 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
           IconButton(
             icon: const Icon(Icons.add_circle, color: Colors.green),
             onPressed: () {
-              // TODO: Thêm chức năng thêm khách hàng
+              showDialog(
+                context: context,
+                builder: (_) => const AddCustomerDialog(),
+              );
             },
           ),
         ],
@@ -156,93 +161,132 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
   }
 
   Widget _buildCustomerCard(Map<String, dynamic> data) {
-    return Card(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Row(
-          children: [
-            // Ảnh đại diện
-            Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                color: Colors.grey[200],
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Icon(Icons.store, size: 32, color: Colors.grey),
+    return InkWell(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => CustomerDetailScreen(
+              customerId: data['id'] ?? '',
+              customerData: data,
             ),
-            const SizedBox(width: 12),
-            // Thông tin khách hàng
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Text(
-                        data['storeName'] ?? 'Tên KH',
-                        style: const TextStyle(
-                            fontWeight: FontWeight.bold, fontSize: 16),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        data['code'] != null ? '- ${data['code']}' : '',
-                        style:
-                            const TextStyle(color: Colors.grey, fontSize: 14),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 2),
-                  Row(
-                    children: [
-                      const Icon(Icons.location_on,
-                          size: 16, color: Colors.grey),
-                      const SizedBox(width: 4),
-                      Expanded(
-                        child: Text(
-                          data['address'] ?? '',
+          ),
+        );
+      },
+      child: Card(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Row(
+            children: [
+              // Ảnh đại diện
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: Colors.grey[200],
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(Icons.store, size: 32, color: Colors.grey),
+              ),
+              const SizedBox(width: 12),
+              // Thông tin khách hàng
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Text(
+                          data['storeName'] ?? 'Tên KH',
+                          style: const TextStyle(
+                              fontWeight: FontWeight.bold, fontSize: 16),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          data['code'] != null ? '- ${data['code']}' : '',
+                          style:
+                              const TextStyle(color: Colors.grey, fontSize: 14),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 2),
+                    Row(
+                      children: [
+                        const Icon(Icons.location_on,
+                            size: 16, color: Colors.grey),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            data['address'] ?? '',
+                            style: const TextStyle(
+                                fontSize: 13, color: Colors.black87),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                    Row(
+                      children: [
+                        const Icon(Icons.phone, size: 16, color: Colors.grey),
+                        const SizedBox(width: 4),
+                        Text(
+                          data['phoneNumber'] ?? '',
                           style: const TextStyle(
                               fontSize: 13, color: Colors.black87),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              // Nút/thông tin phụ
+              Column(
+                children: [
+                  InkWell(
+                    onTap: () async {
+                      try {
+                        final docId = data['id'] ?? '';
+                        if (docId.isNotEmpty) {
+                          final visited = data['visited'] ?? false;
+                          await FirebaseFirestore.instance
+                              .collection('customers')
+                              .doc(docId)
+                              .update({'visited': !visited});
+                        }
+                      } catch (e) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Error: $e')),
+                        );
+                      }
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: (data['visited'] ?? false)
+                            ? Colors.green[100]
+                            : Colors.grey[200],
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        (data['visited'] ?? false) ? 'Đã thăm' : 'Chưa thăm',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: (data['visited'] ?? false)
+                              ? Colors.green[800]
+                              : Colors.grey[800],
                         ),
                       ),
-                    ],
+                    ),
                   ),
-                  Row(
-                    children: [
-                      const Icon(Icons.phone, size: 16, color: Colors.grey),
-                      const SizedBox(width: 4),
-                      Text(
-                        data['phoneNumber'] ?? '',
-                        style: const TextStyle(
-                            fontSize: 13, color: Colors.black87),
-                      ),
-                    ],
-                  ),
+                  const SizedBox(height: 8),
+                  Icon(Icons.navigation, color: Color(0xFF2563EB), size: 24),
                 ],
               ),
-            ),
-            // Nút/thông tin phụ
-            Column(
-              children: [
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: Colors.grey[200],
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child:
-                      const Text('Chưa thăm', style: TextStyle(fontSize: 12)),
-                ),
-                const SizedBox(height: 8),
-                Icon(Icons.navigation, color: Color(0xFF2563EB), size: 24),
-                // Có thể thêm khoảng cách, số mét nếu có dữ liệu
-              ],
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

@@ -47,12 +47,21 @@ class Order {
     return Order(
       id: map['id'] ?? '',
       customer: map['customer'] is Map<String, dynamic>
-          ? Customer.fromMap(map['customer'])
-          : Customer.fromMap({}),
+          ? Customer.fromMap({
+              ...map['customer'],
+              'id': map['customerId'] ?? map['customer']['id'] ?? '',
+            })
+          : Customer.fromMap({'id': map['customerId'] ?? ''}),
       items: (map['items'] as List<dynamic>? ?? [])
           .map((item) => item is Map<String, dynamic>
-              ? OrderItem.fromMap(item)
-              : OrderItem.fromMap({}))
+              ? OrderItem.fromMap({
+                  ...item,
+                  'productId': item['productId'] ?? '', // Đảm bảo lấy productId
+                  'id': item['productId'] ??
+                      item['id'] ??
+                      '', // Fallback sang id nếu không có productId
+                })
+              : OrderItem.fromMap({'id': ''}))
           .toList(),
       payments: (map['payments'] as List<dynamic>? ?? [])
           .map((p) => p is Map<String, dynamic>
@@ -72,6 +81,7 @@ class Order {
   Map<String, dynamic> toMap() {
     return {
       'id': id,
+      'customerId': customer.id,
       'customer': customer.toMap(),
       'items': items.map((item) => item.toMap()).toList(),
       'payments': payments.map((p) => p.toMap()).toList(),

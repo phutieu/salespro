@@ -31,6 +31,19 @@ class _OrderListScreenState extends State<OrderListScreen> {
     return status.toString().split('.').last;
   }
 
+  Future<void> _updateOrderStatus(String orderId, OrderStatus newStatus) async {
+    try {
+      await firestore.FirebaseFirestore.instance
+          .collection('orders')
+          .doc(orderId)
+          .update({'status': newStatus.toString().split('.').last});
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error updating order status: $e')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Padding(
@@ -95,17 +108,30 @@ class _OrderListScreenState extends State<OrderListScreen> {
                       DataCell(
                           Text('${order.totalAmount.toStringAsFixed(0)} ₫')),
                       DataCell(
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: _getStatusColor(order.status),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            _getStatusText(order.status),
-                            style: const TextStyle(color: Colors.white),
-                          ),
+                        DropdownButton<OrderStatus>(
+                          value: order.status,
+                          items: OrderStatus.values.map((status) {
+                            return DropdownMenuItem<OrderStatus>(
+                              value: status,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: _getStatusColor(status),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Text(
+                                  _getStatusText(status),
+                                  style: const TextStyle(color: Colors.white),
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                          onChanged: (OrderStatus? newStatus) {
+                            if (newStatus != null) {
+                              _updateOrderStatus(order.id, newStatus);
+                            }
+                          },
                         ),
                       ),
                       DataCell(IconButton(

@@ -111,26 +111,27 @@ class _HomeScreenState extends State<HomeScreen> {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
 
+    // Đảm bảo trường ngày trong Firestore là Timestamp, nếu không sẽ bị treo!
+    // Nếu trường ngày là String, hãy chuyển sang Timestamp hoặc sửa lại truy vấn cho đúng kiểu dữ liệu.
+
     try {
-      // Chuyến thăm
       final visitsSnap = await FirebaseFirestore.instance
           .collection('visits')
           .where('userId', isEqualTo: user.uid)
           .where('visitDate', isGreaterThanOrEqualTo: Timestamp.fromDate(today))
           .get();
 
-      // Đơn hàng
       final ordersSnap = await FirebaseFirestore.instance
           .collection('orders')
           .where('userId', isEqualTo: user.uid)
           .where('orderDate', isGreaterThanOrEqualTo: Timestamp.fromDate(today))
           .get();
 
-      // Thanh toán (dùng collection 'payment' thay vì 'payments' nếu đúng với app của bạn)
       final paymentsSnap = await FirebaseFirestore.instance
-          .collection('payment')
+          .collection('payments')
           .where('userId', isEqualTo: user.uid)
-          .where('paymentDate', isGreaterThanOrEqualTo: Timestamp.fromDate(today))
+          .where('paymentDate',
+              isGreaterThanOrEqualTo: Timestamp.fromDate(today))
           .get();
 
       setState(() {
@@ -139,6 +140,7 @@ class _HomeScreenState extends State<HomeScreen> {
         paymentsToday = paymentsSnap.docs.length;
       });
     } catch (e) {
+      // Nếu bị treo, kiểm tra lại kiểu dữ liệu trường ngày trong Firestore!
       debugPrint('Lỗi truy vấn Firestore: $e');
       setState(() {
         visitsToday = 0;
@@ -457,7 +459,5 @@ class CustomBottomNavBar extends StatelessWidget {
       ],
       type: BottomNavigationBarType.fixed,
     );
-  }
-}
   }
 }

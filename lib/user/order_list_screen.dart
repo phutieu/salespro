@@ -5,6 +5,7 @@ import 'custom_bottom_nav_bar.dart' as nav;
 import 'home_screen.dart';
 import 'customer_list_screen.dart';
 import 'checkout_screen.dart';
+import 'package:salespro/admin/models/order_item.dart';
 
 class KPIScreen extends StatelessWidget {
   const KPIScreen({super.key});
@@ -246,33 +247,31 @@ class _OrderListScreenState extends State<OrderListScreen> {
                                     borderRadius: BorderRadius.circular(24)),
                               ),
                               onPressed: () {
-                                final cartItems = <Map<String, dynamic>>[];
+                                final orderItems = <OrderItem>[];
                                 for (final entry in _quantities.entries) {
                                   if (entry.value > 0) {
-                                    final doc = docs
-                                        .firstWhere((d) => d.id == entry.key);
-                                    final data =
-                                        doc.data() as Map<String, dynamic>;
-                                    cartItems.add({
-                                      'id': doc.id,
-                                      'name': data['name'],
-                                      'price': data['salePrice'],
-                                      'quantity': entry.value,
-                                    });
+                                    final doc = docs.firstWhere((d) => d.id == entry.key);
+                                    final data = doc.data() as Map<String, dynamic>;
+                                    orderItems.add(OrderItem(
+                                      id: doc.id,
+                                      name: data['name'] ?? '',
+                                      price: (data['salePrice'] ?? 0).toDouble(),
+                                      quantity: entry.value,
+                                      unit: _units[doc.id] ?? data['unit'] ?? 'HỘP',
+                                    ));
                                   }
                                 }
-                                if (cartItems.isEmpty) {
+                                if (orderItems.isEmpty) {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     const SnackBar(
-                                        content: Text(
-                                            'Vui lòng chọn ít nhất 1 sản phẩm!')),
+                                      content: Text('Vui lòng chọn ít nhất 1 sản phẩm!'),
+                                    ),
                                   );
                                   return;
                                 }
                                 Navigator.of(context).push(
                                   MaterialPageRoute(
-                                    builder: (_) =>
-                                        CheckoutScreen(cartItems: cartItems),
+                                    builder: (_) => CheckoutScreen(items: orderItems),
                                   ),
                                 );
                               },
@@ -306,4 +305,5 @@ class _OrderListScreenState extends State<OrderListScreen> {
       ),
     );
   }
+}
 }
