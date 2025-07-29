@@ -244,7 +244,8 @@ class _OrderListScreenState extends State<OrderListScreen> {
                           Expanded(
                             child: ElevatedButton(
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF2563EB),
+                                backgroundColor:
+                                    Colors.green, // Đổi sang xanh lá cây
                                 shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(24)),
                               ),
@@ -287,12 +288,21 @@ class _OrderListScreenState extends State<OrderListScreen> {
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
                                   Text(
-                                      '${_quantities.values.fold<int>(0, (sum, q) => sum + (q > 0 ? 1 : 0))} Sản phẩm'),
+                                    '${_quantities.values.fold<int>(0, (sum, q) => sum + (q > 0 ? 1 : 0))} Sản phẩm',
+                                    style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.black), // Chữ đen đậm
+                                  ),
                                   const SizedBox(width: 8),
-                                  const Icon(Icons.shopping_cart_outlined),
+                                  const Icon(Icons.shopping_cart_outlined,
+                                      color: Colors.black),
                                   const SizedBox(width: 8),
                                   Text(
-                                      '${_quantities.values.fold<int>(0, (sum, q) => sum + q)}'),
+                                    '${_quantities.values.fold<int>(0, (sum, q) => sum + q)}',
+                                    style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.black), // Chữ đen đậm
+                                  ),
                                 ],
                               ),
                             ),

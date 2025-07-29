@@ -333,6 +333,8 @@ class CustomerDetailScreen extends StatelessWidget {
         return Colors.green;
       case modelOrder.OrderStatus.Cancelled:
         return Colors.red;
+      case modelOrder.OrderStatus.Return:
+        return Colors.purple;
     }
   }
 
@@ -346,6 +348,8 @@ class CustomerDetailScreen extends StatelessWidget {
         return 'Đã giao';
       case modelOrder.OrderStatus.Cancelled:
         return 'Đã hủy';
+      case modelOrder.OrderStatus.Return:
+        return 'Đã trả';
     }
   }
 
@@ -361,6 +365,8 @@ class CustomerDetailScreen extends StatelessWidget {
         return 'Đang xử lý';
       case modelOrder.OrderStatus.Pending:
         return 'Chưa xác nhận';
+      case modelOrder.OrderStatus.Return:
+        return 'Đã trả';
     }
   }
 

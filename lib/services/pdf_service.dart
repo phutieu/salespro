@@ -6,12 +6,32 @@ import 'package:open_file/open_file.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter/foundation.dart';
 import '../admin/models/order.dart';
+import 'package:cloud_firestore/cloud_firestore.dart' as firestore;
 
 class PdfService {
   static Future<void> generateInvoice(Order order) async {
     try {
       final pdf = pw.Document();
-
+      // Nếu là đơn trả hàng, lấy lý do trả hàng từ returns collection
+      String? returnReason;
+      if (order.status == OrderStatus.Return) {
+        try {
+          final returns = await firestore.FirebaseFirestore.instance
+              .collection('returns')
+              .where('orderId', isEqualTo: order.id)
+              .orderBy('createdAt', descending: true)
+              .limit(1)
+              .get();
+          if (returns.docs.isNotEmpty) {
+            final items = returns.docs.first.data()['items'] as List?;
+            if (items != null && items.isNotEmpty) {
+              returnReason = items.first['reason'] as String?;
+            }
+          }
+        } catch (e) {
+          returnReason = null;
+        }
+      }
       pdf.addPage(
         pw.Page(
           pageFormat: PdfPageFormat.a4,
@@ -19,6 +39,15 @@ class PdfService {
             return pw.Column(
               crossAxisAlignment: pw.CrossAxisAlignment.start,
               children: [
+                if (order.status == OrderStatus.Return)
+                  pw.Container(
+                    padding: const pw.EdgeInsets.symmetric(vertical: 8),
+                    child: pw.Text('ĐƠN TRẢ HÀNG',
+                        style: pw.TextStyle(
+                            fontSize: 18,
+                            fontWeight: pw.FontWeight.bold,
+                            color: PdfColors.orange)),
+                  ),
                 // Header
                 pw.Row(
                   mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
@@ -209,6 +238,17 @@ class PdfService {
                 ),
                 pw.SizedBox(height: 30),
 
+                // Trước phần chữ ký, nếu là đơn trả hàng và có lý do
+                if (order.status == OrderStatus.Return &&
+                    returnReason != null &&
+                    returnReason.isNotEmpty)
+                  pw.Container(
+                    margin: const pw.EdgeInsets.only(top: 16, bottom: 8),
+                    child: pw.Text('Lý do trả hàng: $returnReason',
+                        style: pw.TextStyle(
+                            color: PdfColors.orange,
+                            fontWeight: pw.FontWeight.bold)),
+                  ),
                 // Footer
                 pw.Row(
                   mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,

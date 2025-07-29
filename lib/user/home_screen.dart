@@ -8,6 +8,7 @@ import 'custom_bottom_nav_bar.dart';
 import 'screens/orthers_scren.dart';
 import 'payment_sreen.dart';
 import 'kpi_screen.dart';
+import 'package:intl/intl.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -28,6 +29,7 @@ class _HomeScreenState extends State<HomeScreen> {
   int pendingPayments = 0;
   List<Map<String, dynamic>> todayRoutes = [];
   bool isLoading = true;
+  int _salesTabIndex = 0;
 
   @override
   void initState() {
@@ -368,134 +370,264 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF6F8FC),
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        title: const Text('', style: TextStyle(color: Colors.black)),
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(0),
+        child: SizedBox
+            .shrink(), // Không render AppBar để không có khoảng trắng đầu
       ),
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
           : RefreshIndicator(
               onRefresh: _loadAll,
-              child: ListView(
-                padding: const EdgeInsets.all(16),
+              child: Column(
                 children: [
-                  // User info
-                  Card(
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16)),
-                    child: Padding(
+                  Expanded(
+                    child: ListView(
                       padding: const EdgeInsets.all(16),
-                      child: Row(
-                        children: [
-                          GestureDetector(
-                            onTap: () {
-                              _showLogoutDialog();
-                            },
-                            child: CircleAvatar(
-                              radius: 28,
-                              backgroundColor: Colors.blue[100],
-                              child: const Icon(Icons.person,
-                                  size: 32, color: Colors.blue),
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(userName,
-                                    style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 18)),
-                                Text(userRole,
-                                    style: const TextStyle(color: Colors.grey)),
-                                const SizedBox(height: 8),
-                                Row(
+                      children: [
+                        // User info
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 8.0),
+                          child: Row(
+                            children: [
+                              GestureDetector(
+                                onTap: () {
+                                  _showLogoutDialog();
+                                },
+                                child: CircleAvatar(
+                                  radius: 28,
+                                  backgroundColor: Colors.blue[100],
+                                  child: const Icon(Icons.person,
+                                      size: 32, color: Colors.blue),
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    const Icon(Icons.calendar_today,
-                                        size: 16, color: Colors.grey),
-                                    const SizedBox(width: 4),
-                                    Text('$dateStr  $timeStr',
+                                    Text(userName,
                                         style: const TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 18)),
+                                    Text(userRole,
+                                        style: const TextStyle(
+                                            color: Colors.grey)),
+                                    const SizedBox(height: 8),
+                                    Row(
+                                      children: [
+                                        const Icon(Icons.calendar_today,
+                                            size: 16, color: Colors.grey),
+                                        const SizedBox(width: 4),
+                                        Text('$dateStr  $timeStr',
+                                            style: const TextStyle(
+                                                fontSize: 13,
+                                                color: Colors.grey)),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        // Điểm danh
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 8.0),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text('Điểm danh',
+                                        style: TextStyle(
+                                            fontWeight: FontWeight.bold)),
+                                    const SizedBox(height: 8),
+                                    Row(
+                                      children: [
+                                        const Text('IN: ',
+                                            style:
+                                                TextStyle(color: Colors.green)),
+                                        Text(checkInTime,
+                                            style: const TextStyle(
+                                                fontWeight: FontWeight.bold)),
+                                        const SizedBox(width: 16),
+                                        const Text('OUT: ',
+                                            style:
+                                                TextStyle(color: Colors.red)),
+                                        Text(checkOutTime,
+                                            style: const TextStyle(
+                                                fontWeight: FontWeight.bold)),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              ElevatedButton(
+                                onPressed: _handleCheckInOut,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: checkInStatus == 'IN'
+                                      ? Colors.green
+                                      : Colors.red,
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(24)),
+                                  elevation: 0,
+                                ),
+                                child: Text(checkInStatus),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        // Chỉ số bán hàng
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 8.0),
+                          child: Text('Chỉ số bán hàng',
+                              style: TextStyle(
+                                  fontWeight: FontWeight.bold, fontSize: 16)),
+                        ),
+                        // 3 chỉ số chuyến thăm, đơn hàng, thanh toán (như đã sửa ở trên)
+                        Row(
+                          children: [
+                            Expanded(
+                              child: InkWell(
+                                onTap: () {
+                                  Navigator.of(context).push(
+                                    MaterialPageRoute(
+                                        builder: (_) =>
+                                            const CustomerListScreen()),
+                                  );
+                                },
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(Icons.location_on,
+                                        color: Colors.blue, size: 28),
+                                    const SizedBox(height: 4),
+                                    Text('2',
+                                        style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 18)), // chuyến thăm
+                                    const SizedBox(height: 2),
+                                    const Text('Chuyến thăm',
+                                        style: TextStyle(
                                             fontSize: 13, color: Colors.grey)),
                                   ],
                                 ),
-                              ],
+                              ),
                             ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  // Check-in/Check-out
-                  Card(
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16)),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text('Điểm danh',
-                                    style:
-                                        TextStyle(fontWeight: FontWeight.bold)),
-                                const SizedBox(height: 8),
-                                Row(
+                            Expanded(
+                              child: InkWell(
+                                onTap: () {
+                                  Navigator.of(context).push(
+                                    MaterialPageRoute(
+                                        builder: (_) =>
+                                            const OrderListScreen()),
+                                  );
+                                },
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    const Text('IN: ',
-                                        style: TextStyle(color: Colors.green)),
-                                    Text(checkInTime,
-                                        style: const TextStyle(
-                                            fontWeight: FontWeight.bold)),
-                                    const SizedBox(width: 16),
-                                    const Text('OUT: ',
-                                        style: TextStyle(color: Colors.red)),
-                                    Text(checkOutTime,
-                                        style: const TextStyle(
-                                            fontWeight: FontWeight.bold)),
+                                    Icon(Icons.shopping_cart,
+                                        color: Colors.orange, size: 28),
+                                    const SizedBox(height: 4),
+                                    Text('5',
+                                        style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 18)), // đơn hàng
+                                    const SizedBox(height: 2),
+                                    const Text('Đơn hàng',
+                                        style: TextStyle(
+                                            fontSize: 13, color: Colors.grey)),
                                   ],
                                 ),
+                              ),
+                            ),
+                            Expanded(
+                              child: InkWell(
+                                onTap: () {
+                                  Navigator.of(context).push(
+                                    MaterialPageRoute(
+                                        builder: (_) => const PaymentScreen()),
+                                  );
+                                },
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(Icons.payments,
+                                        color: Colors.redAccent, size: 28),
+                                    const SizedBox(height: 4),
+                                    Text('262K',
+                                        style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 18,
+                                            color: Colors
+                                                .redAccent)), // thanh toán
+                                    const SizedBox(height: 2),
+                                    const Text('Thanh toán',
+                                        style: TextStyle(
+                                            fontSize: 13, color: Colors.grey)),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        // Tiến độ KPI
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 8.0),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text('Tiến độ thực hiện KPI',
+                                  style:
+                                      TextStyle(fontWeight: FontWeight.bold)),
+                              TextButton(
+                                onPressed: () {
+                                  Navigator.of(context).push(
+                                    MaterialPageRoute(
+                                        builder: (_) => const KpiScreen()),
+                                  );
+                                },
+                                child: const Text('Xem chi tiết'),
+                              ),
+                            ],
+                          ),
+                        ),
+                        // Sau phần tiến độ KPI, thêm hình ảnh minh họa
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 16.0),
+                          child: Center(
+                            child: Column(
+                              children: [
+                                // Nếu có asset local, thay thế bằng Image.asset('assets/images/kpi_illustration.png', height: 120)
+                                Icon(Icons.insert_chart_outlined,
+                                    size: 100, color: Colors.blue[100]),
+                                const SizedBox(height: 8),
+                                const Text(
+                                    'Theo dõi tiến độ KPI của bạn mỗi ngày!',
+                                    style: TextStyle(color: Colors.grey)),
                               ],
                             ),
                           ),
-                          ElevatedButton(
-                            onPressed: _handleCheckInOut,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: checkInStatus == 'IN'
-                                  ? Colors.green
-                                  : Colors.red,
-                              shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(16)),
-                            ),
-                            child: Text(checkInStatus),
-                          ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 12),
-                  // Quick stats
-                  Row(
-                    children: [
-                      _buildVisitCard(),
-                      const SizedBox(width: 8),
-                      _buildOrderCard(),
-                      const SizedBox(width: 8),
-                      _buildPaymentCard(),
-                    ],
+                  // Đảm bảo CustomBottomNavBar luôn nằm dưới cùng
+                  SafeArea(
+                    top: false,
+                    child: CustomBottomNavBar(
+                      currentIndex: _selectedIndex,
+                      onTap: _onNavTap,
+                    ),
                   ),
                 ],
               ),
             ),
-      bottomNavigationBar: CustomBottomNavBar(
-        currentIndex: _selectedIndex,
-        onTap: _onNavTap,
-      ),
     );
   }
 

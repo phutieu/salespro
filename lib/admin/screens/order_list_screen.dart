@@ -24,6 +24,8 @@ class _OrderListScreenState extends State<OrderListScreen> {
         return Colors.green;
       case OrderStatus.Cancelled:
         return Colors.red;
+      case OrderStatus.Return:
+        return Colors.purple;
     }
   }
 

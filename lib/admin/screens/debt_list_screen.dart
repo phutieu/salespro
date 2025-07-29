@@ -96,60 +96,60 @@ class _DebtListScreenState extends State<DebtListScreen>
                         final payments = paymentDocs.map((doc) {
                           final data = doc.data() as Map<String, dynamic>;
                           return Payment.fromMap(data..['id'] = doc.id);
-                        }).toList();
-                        // Tính công nợ cho từng khách hàng
-                        final Map<Customer, double> customerDebts = {};
-                        for (var order in orders) {
-                          if (order.status != OrderStatus.Cancelled) {
+                    }).toList();
+                    // Tính công nợ cho từng khách hàng
+                    final Map<Customer, double> customerDebts = {};
+                    for (var order in orders) {
+                      if (order.status != OrderStatus.Cancelled) {
                             // Tính số tiền đã thanh toán từ payments collection
                             final paid = payments
                                 .where((p) => p.orderId == order.id)
                                 .fold(0.0, (sum, p) => sum + p.amount);
                             final amountDue = order.totalAmount - paid;
                             if (amountDue > 0) {
-                              customerDebts.update(
-                                order.customer,
+                        customerDebts.update(
+                          order.customer,
                                 (value) => value + amountDue,
                                 ifAbsent: () => amountDue,
-                              );
+                        );
                             }
-                          }
-                        }
-                        final debts = customerDebts.entries.toList();
+                      }
+                    }
+                    final debts = customerDebts.entries.toList();
                         if (debts.isEmpty) {
                           return const Center(
                             child:
                                 Text('Không có khách hàng nào chưa thanh toán'),
                           );
                         }
-                        return DataTable(
-                          columns: const [
+                    return DataTable(
+                      columns: const [
                             DataColumn(label: Text('Khách hàng')),
                             DataColumn(label: Text('Số điện thoại')),
                             DataColumn(label: Text('Tổng nợ')),
                             DataColumn(label: Text('Thao tác')),
-                          ],
-                          rows: debts.map((entry) {
-                            final customer = entry.key;
-                            final totalDebt = entry.value;
-                            return DataRow(cells: [
-                              DataCell(Text(customer.storeName)),
-                              DataCell(Text(customer.phoneNumber)),
-                              DataCell(
-                                Text(
-                                  '${NumberFormat.decimalPattern('vi_VN').format(totalDebt)} ₫',
-                                  style: TextStyle(
+                      ],
+                      rows: debts.map((entry) {
+                        final customer = entry.key;
+                        final totalDebt = entry.value;
+                        return DataRow(cells: [
+                          DataCell(Text(customer.storeName)),
+                          DataCell(Text(customer.phoneNumber)),
+                          DataCell(
+                            Text(
+                              '${NumberFormat.decimalPattern('vi_VN').format(totalDebt)} ₫',
+                              style: TextStyle(
                                     color: totalDebt > 0
                                         ? Colors.red
                                         : Colors.green,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
+                                fontWeight: FontWeight.bold,
                               ),
-                              DataCell(IconButton(
-                                icon: const Icon(Icons.receipt_long,
-                                    color: Colors.blue),
-                                onPressed: () {
+                            ),
+                          ),
+                          DataCell(IconButton(
+                            icon: const Icon(Icons.receipt_long,
+                                color: Colors.blue),
+                            onPressed: () {
                                   _showCustomerDebtDetails(
                                       context, customer, orders, payments);
                                 },
@@ -266,10 +266,10 @@ class _DebtListScreenState extends State<DebtListScreen>
                                 onPressed: () {
                                   _showCustomerDebtDetails(
                                       context, customer, orders, payments);
-                                },
-                              )),
-                            ]);
-                          }).toList(),
+                            },
+                          )),
+                        ]);
+                      }).toList(),
                         );
                       },
                     );

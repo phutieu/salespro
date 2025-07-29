@@ -76,6 +76,8 @@ class _PaymentScreenState extends State<PaymentScreen>
         return Colors.green;
       case modelOrder.OrderStatus.Cancelled:
         return Colors.red;
+      case modelOrder.OrderStatus.Return:
+        return Colors.purple;
     }
   }
 
@@ -89,6 +91,8 @@ class _PaymentScreenState extends State<PaymentScreen>
         return 'Đã giao';
       case modelOrder.OrderStatus.Cancelled:
         return 'Đã hủy';
+      case modelOrder.OrderStatus.Return:
+        return 'Đã trả';
     }
   }
 

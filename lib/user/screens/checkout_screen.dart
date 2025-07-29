@@ -98,10 +98,12 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                                 Text(
                                   name,
                                   style: const TextStyle(
-                                      fontWeight: FontWeight.bold, fontSize: 16),
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16),
                                 ),
                                 const SizedBox(height: 4),
-                                Text('Đơn giá: ${NumberFormat('#,###').format(price)}₫'),
+                                Text(
+                                    'Đơn giá: ${NumberFormat('#,###').format(price)}₫'),
                                 Text('Số lượng: $quantity'),
                               ],
                             ),
@@ -138,15 +140,18 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             const SizedBox(height: 16),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF2563EB),
+                backgroundColor: Colors.green, // Đổi sang xanh lá cây
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(24)),
                 padding: const EdgeInsets.symmetric(vertical: 16),
               ),
               onPressed: _createOrder,
               child: const Text(
-                'Xác nhận đơn hàng',
-                style: TextStyle(fontSize: 16),
+                'Xác nhận đặt hàng',
+                style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black), // Chữ đen đậm
               ),
             ),
           ],

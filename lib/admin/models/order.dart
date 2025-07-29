@@ -3,7 +3,7 @@ import 'package:salespro/admin/models/order_item.dart';
 import 'package:salespro/admin/models/payment.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-enum OrderStatus { Pending, Confirmed, Delivered, Cancelled }
+enum OrderStatus { Pending, Confirmed, Delivered, Cancelled, Return }
 
 enum PaymentStatus { Unpaid, PartiallyPaid, Paid }
 

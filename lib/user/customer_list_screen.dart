@@ -54,9 +54,9 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
       default:
         screen = const HomeScreen();
     }
-    Navigator.of(context).pushReplacement(
+      Navigator.of(context).pushReplacement(
       MaterialPageRoute(builder: (_) => screen),
-    );
+      );
     setState(() => _selectedIndex = index);
   }
 

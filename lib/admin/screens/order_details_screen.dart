@@ -74,7 +74,24 @@ class OrderDetailsScreen extends StatelessWidget {
                 _buildSectionTitle('Order Summary'),
                 Text(
                     'Order Date: ${DateFormat('dd/MM/yyyy HH:mm').format(order.orderDate)}'),
-                Text('Status: ${order.status.toString().split('.').last}'),
+                Row(
+                  children: [
+                    const Text('Trạng thái: ',
+                        style: TextStyle(fontWeight: FontWeight.bold)),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: _getStatusColor(order.status),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        _getStatusText(order.status),
+                        style: const TextStyle(color: Colors.white),
+                      ),
+                    ),
+                  ],
+                ),
                 const Divider(height: 30),
                 _buildSectionTitle('Items'),
                 DataTable(
@@ -117,5 +134,35 @@ class OrderDetailsScreen extends StatelessWidget {
         style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
       ),
     );
+  }
+}
+
+Color _getStatusColor(OrderStatus status) {
+  switch (status) {
+    case OrderStatus.Pending:
+      return Colors.orange;
+    case OrderStatus.Confirmed:
+      return Colors.blue;
+    case OrderStatus.Delivered:
+      return Colors.green;
+    case OrderStatus.Cancelled:
+      return Colors.red;
+    case OrderStatus.Return:
+      return Colors.purple;
+  }
+}
+
+String _getStatusText(OrderStatus status) {
+  switch (status) {
+    case OrderStatus.Pending:
+      return 'Chờ xác nhận';
+    case OrderStatus.Confirmed:
+      return 'Đã xác nhận';
+    case OrderStatus.Delivered:
+      return 'Đã giao';
+    case OrderStatus.Cancelled:
+      return 'Đã hủy';
+    case OrderStatus.Return:
+      return 'Đã trả hàng';
   }
 }

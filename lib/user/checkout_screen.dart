@@ -112,7 +112,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               width: double.infinity,
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF2563EB),
+                  backgroundColor: Colors.green, // Đổi sang xanh lá cây
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(24)),
                 ),
@@ -167,8 +167,13 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                           (route) => false,
                         );
                       },
-                child: const Text('Xác nhận đặt hàng',
-                    style: TextStyle(fontSize: 18)),
+                child: const Text(
+                  'Xác nhận đặt hàng',
+                  style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black), // Chữ đen đậm
+                ),
               ),
             ),
           ),
