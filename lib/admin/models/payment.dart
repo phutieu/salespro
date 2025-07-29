@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 enum PaymentMethod { Cash, BankTransfer, Other }
 
 class Payment {
@@ -23,7 +25,10 @@ class Payment {
           ? (map['amount'] as int).toDouble()
           : (map['amount'] ?? 0.0),
       paymentDate: map['paymentDate'] != null
-          ? DateTime.tryParse(map['paymentDate']) ?? DateTime.now()
+          ? (map['paymentDate'] is Timestamp
+              ? (map['paymentDate'] as Timestamp).toDate()
+              : DateTime.tryParse(map['paymentDate'].toString()) ??
+                  DateTime.now())
           : DateTime.now(),
       method: PaymentMethod.values.firstWhere(
         (e) => e.toString() == 'PaymentMethod.' + (map['method'] ?? 'Cash'),

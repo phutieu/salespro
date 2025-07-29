@@ -143,9 +143,8 @@ class _ProductListScreenState extends State<ProductListScreen> {
                             ),
                             IconButton(
                               icon: const Icon(Icons.delete, color: Colors.red),
-                              onPressed: () {
-                                _deleteProduct(doc.id);
-                              },
+                              onPressed: () =>
+                                  _confirmDeleteProduct(context, doc.id),
                             ),
                           ],
                         )),
@@ -172,6 +171,36 @@ class _ProductListScreenState extends State<ProductListScreen> {
                 child: const Text('Trang sau'),
               ),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _confirmDeleteProduct(BuildContext context, String productId) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Xác nhận xóa'),
+        content: const Text('Bạn có chắc muốn xóa sản phẩm này?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Hủy'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              await FirebaseFirestore.instance
+                  .collection('products')
+                  .doc(productId)
+                  .delete();
+              if (context.mounted) {
+                Navigator.of(context).pop();
+                _fetchProducts();
+              }
+            },
+            child: const Text('Xóa'),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
           ),
         ],
       ),

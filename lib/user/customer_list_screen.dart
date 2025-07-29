@@ -5,6 +5,8 @@ import 'home_screen.dart';
 import 'order_list_screen.dart';
 import 'dialogs/add_customer_dialog.dart';
 import 'screens/customer_detail_screen.dart';
+import 'screens/orthers_scren.dart';
+import 'kpi_screen.dart';
 
 class KPIScreen extends StatelessWidget {
   const KPIScreen({super.key});
@@ -44,10 +46,10 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
         screen = const OrderListScreen();
         break;
       case 3:
-        screen = const KPIScreen();
+        screen = const OrdersScreen();
         break;
       case 4:
-        screen = const MoreScreen();
+        screen = const KpiScreen();
         break;
       default:
         screen = const HomeScreen();

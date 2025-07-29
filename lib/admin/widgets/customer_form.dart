@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:salespro/admin/models/customer.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:math';
 
 class CustomerForm extends StatefulWidget {
@@ -84,18 +85,47 @@ class _CustomerFormState extends State<CustomerForm> {
         ),
         ElevatedButton(
           child: const Text('Save'),
-          onPressed: () {
+          onPressed: () async {
             if (_formKey.currentState!.validate()) {
-              final newCustomer = Customer(
-                id: widget.customer?.id ??
-                    'KH${Random().nextInt(1000).toString().padLeft(3, '0')}',
-                storeName: _storeNameController.text,
-                address: _addressController.text,
-                contactPerson: _contactPersonController.text,
-                phoneNumber: _phoneNumberController.text,
-                area: _areaController.text,
-              );
-              widget.onSave(newCustomer);
+              if (widget.customer == null) {
+                // Tạo khách hàng mới
+                final doc = await FirebaseFirestore.instance
+                    .collection('customers')
+                    .add({
+                  'storeName': _storeNameController.text,
+                  'address': _addressController.text,
+                  'contactPerson': _contactPersonController.text,
+                  'phoneNumber': _phoneNumberController.text,
+                  'area': _areaController.text,
+                  'visited': false,
+                  'createdAt': FieldValue.serverTimestamp(),
+                });
+                // Cập nhật id
+                await doc.update({'id': doc.id});
+
+                final newCustomer = Customer(
+                  id: doc.id,
+                  storeName: _storeNameController.text,
+                  address: _addressController.text,
+                  contactPerson: _contactPersonController.text,
+                  phoneNumber: _phoneNumberController.text,
+                  area: _areaController.text,
+                  visited: false,
+                );
+                widget.onSave(newCustomer);
+              } else {
+                // Cập nhật khách hàng hiện có
+                final updatedCustomer = Customer(
+                  id: widget.customer!.id,
+                  storeName: _storeNameController.text,
+                  address: _addressController.text,
+                  contactPerson: _contactPersonController.text,
+                  phoneNumber: _phoneNumberController.text,
+                  area: _areaController.text,
+                  visited: widget.customer!.visited,
+                );
+                widget.onSave(updatedCustomer);
+              }
               Navigator.of(context).pop();
             }
           },

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart' as firestore;
 import 'package:salespro/admin/models/order.dart';
+import '../../services/pdf_service.dart';
 
 class OrderDetailsScreen extends StatelessWidget {
   final String orderId;
@@ -13,6 +14,41 @@ class OrderDetailsScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text('Order Details - #$orderId'),
+        actions: [
+          FutureBuilder<firestore.DocumentSnapshot>(
+            future: firestore.FirebaseFirestore.instance
+                .collection('orders')
+                .doc(orderId)
+                .get(),
+            builder: (context, snapshot) {
+              if (!snapshot.hasData || !snapshot.data!.exists) {
+                return const SizedBox.shrink();
+              }
+              final data = snapshot.data!.data() as Map<String, dynamic>;
+              final order = Order.fromMap(data..['id'] = orderId);
+              return IconButton(
+                icon: const Icon(Icons.picture_as_pdf),
+                tooltip: 'Xuất hóa đơn PDF',
+                onPressed: () async {
+                  try {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Đang tạo hóa đơn PDF...')),
+                    );
+                    await PdfService.generateInvoice(order);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                          content: Text('Đã xuất hóa đơn thành công!')),
+                    );
+                  } catch (e) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Lỗi xuất hóa đơn: $e')),
+                    );
+                  }
+                },
+              );
+            },
+          ),
+        ],
       ),
       body: FutureBuilder<firestore.DocumentSnapshot>(
         future: firestore.FirebaseFirestore.instance

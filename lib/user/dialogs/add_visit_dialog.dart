@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class AddVisitDialog extends StatefulWidget {
   final String customerId;
@@ -24,8 +25,10 @@ class _AddVisitDialogState extends State<AddVisitDialog> {
     if (!_formKey.currentState!.validate()) return;
 
     try {
+      final user = FirebaseAuth.instance.currentUser;
       await FirebaseFirestore.instance.collection('visits').add({
         'customerId': widget.customerId,
+        'userId': user?.uid,
         'visitDate': DateTime.now().toIso8601String(),
         'note': _noteController.text,
         'status': _status,

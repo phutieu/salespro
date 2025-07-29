@@ -1,4 +1,5 @@
 import 'package:salespro/admin/models/purchase_order_item.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 enum PurchaseOrderStatus { Ordered, Received }
 
@@ -22,7 +23,10 @@ class PurchaseOrder {
       id: map['id'] ?? '',
       supplier: map['supplier'] ?? '',
       orderDate: map['orderDate'] != null
-          ? DateTime.tryParse(map['orderDate']) ?? DateTime.now()
+          ? (map['orderDate'] is Timestamp
+              ? (map['orderDate'] as Timestamp).toDate()
+              : DateTime.tryParse(map['orderDate'].toString()) ??
+                  DateTime.now())
           : DateTime.now(),
       items: (map['items'] as List<dynamic>? ?? [])
           .map((item) => item is Map<String, dynamic>

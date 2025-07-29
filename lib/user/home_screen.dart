@@ -4,6 +4,10 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'login.dart';
 import 'customer_list_screen.dart';
 import 'order_list_screen.dart';
+import 'custom_bottom_nav_bar.dart';
+import 'screens/orthers_scren.dart';
+import 'payment_sreen.dart';
+import 'kpi_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -20,6 +24,8 @@ class _HomeScreenState extends State<HomeScreen> {
   int visitsToday = 0;
   int ordersToday = 0;
   int paymentsToday = 0;
+  double totalAmountDue = 0.0;
+  int pendingPayments = 0;
   List<Map<String, dynamic>> todayRoutes = [];
   bool isLoading = true;
 
@@ -111,9 +117,6 @@ class _HomeScreenState extends State<HomeScreen> {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
 
-    // Đảm bảo trường ngày trong Firestore là Timestamp, nếu không sẽ bị treo!
-    // Nếu trường ngày là String, hãy chuyển sang Timestamp hoặc sửa lại truy vấn cho đúng kiểu dữ liệu.
-
     try {
       final visitsSnap = await FirebaseFirestore.instance
           .collection('visits')
@@ -134,18 +137,90 @@ class _HomeScreenState extends State<HomeScreen> {
               isGreaterThanOrEqualTo: Timestamp.fromDate(today))
           .get();
 
+      // Tính toán dữ liệu thanh toán
+      await _fetchPaymentData();
+
       setState(() {
         visitsToday = visitsSnap.docs.length;
         ordersToday = ordersSnap.docs.length;
         paymentsToday = paymentsSnap.docs.length;
       });
     } catch (e) {
-      // Nếu bị treo, kiểm tra lại kiểu dữ liệu trường ngày trong Firestore!
       debugPrint('Lỗi truy vấn Firestore: $e');
       setState(() {
         visitsToday = 0;
         ordersToday = 0;
         paymentsToday = 0;
+      });
+    }
+  }
+
+  Future<void> _fetchPaymentData() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    try {
+      // Lấy tất cả orders của user
+      final ordersSnap = await FirebaseFirestore.instance
+          .collection('orders')
+          .where('userId', isEqualTo: user.uid)
+          .get();
+
+      // Lấy tất cả payments
+      final paymentsSnap =
+          await FirebaseFirestore.instance.collection('payments').get();
+
+      // Tạo map payments theo orderId
+      final paymentsMap = <String, List<Map<String, dynamic>>>{};
+      for (final doc in paymentsSnap.docs) {
+        final data = doc.data();
+        final orderId = data['orderId'] as String?;
+        if (orderId != null) {
+          paymentsMap.putIfAbsent(orderId, () => []).add(data);
+        }
+      }
+
+      double totalDue = 0.0;
+      int pendingCount = 0;
+
+      // Tính toán số tiền còn nợ
+      for (final doc in ordersSnap.docs) {
+        final orderData = doc.data();
+        final orderId = doc.id;
+
+        // Tính tổng tiền đơn hàng
+        double orderTotal = 0.0;
+        final items = orderData['items'] as List<dynamic>? ?? [];
+        for (final item in items) {
+          final quantity = (item['quantity'] ?? 0) as num;
+          final unitPrice = (item['unitPrice'] ?? 0) as num;
+          orderTotal += quantity * unitPrice;
+        }
+
+        // Tính số tiền đã thanh toán
+        double paidAmount = 0.0;
+        final orderPayments = paymentsMap[orderId] ?? [];
+        for (final payment in orderPayments) {
+          paidAmount += (payment['amount'] ?? 0) as num;
+        }
+
+        // Tính số tiền còn nợ
+        final amountDue = orderTotal - paidAmount;
+        if (amountDue > 0) {
+          totalDue += amountDue;
+          pendingCount++;
+        }
+      }
+
+      setState(() {
+        totalAmountDue = totalDue;
+        pendingPayments = pendingCount;
+      });
+    } catch (e) {
+      debugPrint('Lỗi tính toán dữ liệu thanh toán: $e');
+      setState(() {
+        totalAmountDue = 0.0;
+        pendingPayments = 0;
       });
     }
   }
@@ -182,11 +257,105 @@ class _HomeScreenState extends State<HomeScreen> {
       Navigator.of(context).push(
         MaterialPageRoute(builder: (_) => const OrderListScreen()),
       );
+    } else if (index == 3) {
+      Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => const OrdersScreen()),
+      );
+    } else if (index == 4) {
+      Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => const KpiScreen()),
+      );
     } else {
       setState(() {
         _selectedIndex = index;
       });
     }
+  }
+
+  Widget _buildVisitCard() {
+    return Expanded(
+      child: StreamBuilder(
+        stream: FirebaseFirestore.instance
+            .collection('customers')
+            .where('visited', isEqualTo: true)
+            .snapshots(),
+        builder: (context, snapshot) {
+          int count = 0;
+          if (snapshot.hasData) {
+            count = snapshot.data!.docs.length;
+          }
+          return InkWell(
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const CustomerListScreen()),
+              );
+            },
+            child: Card(
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16)),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                child: Column(
+                  children: [
+                    Icon(Icons.location_on, color: Colors.blue, size: 28),
+                    const SizedBox(height: 4),
+                    Text(count.toString(),
+                        style: const TextStyle(
+                            fontWeight: FontWeight.bold, fontSize: 18)),
+                    const SizedBox(height: 2),
+                    const Text('Chuyến thăm',
+                        style: TextStyle(fontSize: 13, color: Colors.grey)),
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildOrderCard() {
+    return Expanded(
+      child: StreamBuilder(
+        stream: FirebaseFirestore.instance
+            .collection('orders')
+            .where('userId', isEqualTo: FirebaseAuth.instance.currentUser?.uid)
+            .snapshots(),
+        builder: (context, snapshot) {
+          int count = 0;
+          if (snapshot.hasData) {
+            count = snapshot.data!.docs.length;
+          }
+          return InkWell(
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const OrderListScreen()),
+              );
+            },
+            child: Card(
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16)),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                child: Column(
+                  children: [
+                    Icon(Icons.shopping_cart, color: Colors.orange, size: 28),
+                    const SizedBox(height: 4),
+                    Text(count.toString(),
+                        style: const TextStyle(
+                            fontWeight: FontWeight.bold, fontSize: 18)),
+                    const SizedBox(height: 2),
+                    const Text('Đơn hàng',
+                        style: TextStyle(fontSize: 13, color: Colors.grey)),
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
   }
 
   @override
@@ -202,20 +371,7 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        title: const Text('Trang chủ', style: TextStyle(color: Colors.black)),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout, color: Colors.black),
-            tooltip: 'Đăng xuất',
-            onPressed: () async {
-              await FirebaseAuth.instance.signOut();
-              Navigator.of(context).pushAndRemoveUntil(
-                MaterialPageRoute(builder: (_) => const LoginScreen()),
-                (route) => false,
-              );
-            },
-          ),
-        ],
+        title: const Text('', style: TextStyle(color: Colors.black)),
       ),
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -232,11 +388,16 @@ class _HomeScreenState extends State<HomeScreen> {
                       padding: const EdgeInsets.all(16),
                       child: Row(
                         children: [
-                          CircleAvatar(
-                            radius: 28,
-                            backgroundColor: Colors.blue[100],
-                            child: const Icon(Icons.person,
-                                size: 32, color: Colors.blue),
+                          GestureDetector(
+                            onTap: () {
+                              _showLogoutDialog();
+                            },
+                            child: CircleAvatar(
+                              radius: 28,
+                              backgroundColor: Colors.blue[100],
+                              child: const Icon(Icons.person,
+                                  size: 32, color: Colors.blue),
+                            ),
                           ),
                           const SizedBox(width: 16),
                           Expanded(
@@ -321,73 +482,12 @@ class _HomeScreenState extends State<HomeScreen> {
                   // Quick stats
                   Row(
                     children: [
-                      _buildStatCard('Chuyến thăm', visitsToday,
-                          Icons.location_on, Colors.blue),
+                      _buildVisitCard(),
                       const SizedBox(width: 8),
-                      _buildStatCard('Đơn hàng', ordersToday,
-                          Icons.shopping_cart, Colors.orange),
+                      _buildOrderCard(),
                       const SizedBox(width: 8),
-                      _buildStatCard('Thanh toán', paymentsToday,
-                          Icons.payments, Colors.green),
+                      _buildPaymentCard(),
                     ],
-                  ),
-                  const SizedBox(height: 16),
-                  // Today's route list
-                  Card(
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16)),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text('Tuyến hôm nay',
-                              style: TextStyle(fontWeight: FontWeight.bold)),
-                          const SizedBox(height: 8),
-                          todayRoutes.isEmpty
-                              ? const Text('Không có tuyến nào cho hôm nay.',
-                                  style: TextStyle(color: Colors.grey))
-                              : ListView.separated(
-                                  shrinkWrap: true,
-                                  physics: const NeverScrollableScrollPhysics(),
-                                  itemCount: todayRoutes.length,
-                                  separatorBuilder: (_, __) =>
-                                      const Divider(height: 1),
-                                  itemBuilder: (context, i) {
-                                    final route = todayRoutes[i];
-                                    return ListTile(
-                                      leading: const Icon(Icons.store,
-                                          color: Colors.blue),
-                                      title: Text(route['customerName'] ??
-                                          'Khách hàng'),
-                                      subtitle: Text(route['address'] ?? ''),
-                                      trailing: Text(route['status'] ?? '',
-                                          style: const TextStyle(
-                                              color: Colors.grey)),
-                                    );
-                                  },
-                                ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  // Start trip button
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed: _startTrip,
-                      icon: const Icon(Icons.directions_run),
-                      label: const Text('Bắt đầu chuyến đi'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16)),
-                        textStyle: const TextStyle(
-                            fontSize: 16, fontWeight: FontWeight.bold),
-                      ),
-                    ),
                   ),
                 ],
               ),
@@ -421,6 +521,141 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
+
+  Widget _buildPaymentCard() {
+    return Expanded(
+      child: StreamBuilder(
+        stream: FirebaseFirestore.instance
+            .collection('orders')
+            .where('userId', isEqualTo: FirebaseAuth.instance.currentUser?.uid)
+            .snapshots(),
+        builder: (context, orderSnapshot) {
+          if (!orderSnapshot.hasData) {
+            return _buildPaymentCardContent(0, 0);
+          }
+          return StreamBuilder(
+            stream: FirebaseFirestore.instance
+                .collection('payments')
+                .where('userId',
+                    isEqualTo: FirebaseAuth.instance.currentUser?.uid)
+                .snapshots(),
+            builder: (context, paymentSnapshot) {
+              if (!paymentSnapshot.hasData) {
+                return _buildPaymentCardContent(0, 0);
+              }
+              // Tạo map payments theo orderId
+              final paymentsMap = <String, double>{};
+              for (final doc in paymentSnapshot.data!.docs) {
+                final data = doc.data() as Map<String, dynamic>;
+                final orderId = data['orderId'] as String?;
+                final amount = (data['amount'] ?? 0) as num;
+                if (orderId != null) {
+                  paymentsMap[orderId] = (paymentsMap[orderId] ?? 0) + amount;
+                }
+              }
+              double totalDue = 0.0;
+              int pendingCount = 0;
+              for (final doc in orderSnapshot.data!.docs) {
+                final orderData = doc.data() as Map<String, dynamic>;
+                final orderId = doc.id;
+                double orderTotal = 0.0;
+                final items = orderData['items'] as List<dynamic>? ?? [];
+                for (final item in items) {
+                  final quantity = (item['quantity'] ?? 0) as num;
+                  final unitPrice = (item['unitPrice'] ?? 0) as num;
+                  orderTotal += quantity * unitPrice;
+                }
+                final paidAmount = paymentsMap[orderId] ?? 0.0;
+                final amountDue = orderTotal - paidAmount;
+                if (amountDue > 0) {
+                  totalDue += amountDue;
+                  pendingCount++;
+                }
+              }
+              return _buildPaymentCardContent(totalDue, pendingCount);
+            },
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildPaymentCardContent(double totalAmountDue, int pendingPayments) {
+    return InkWell(
+      onTap: () {
+        Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const PaymentScreen()),
+        );
+      },
+      child: Card(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          child: Column(
+            children: [
+              Icon(Icons.payments,
+                  color: totalAmountDue > 0 ? Colors.red : Colors.green,
+                  size: 28),
+              const SizedBox(height: 4),
+              Text(
+                totalAmountDue > 0
+                    ? '${(totalAmountDue / 1000).toStringAsFixed(0)}K'
+                    : '0',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
+                  color: totalAmountDue > 0 ? Colors.red : Colors.black,
+                ),
+              ),
+              const SizedBox(height: 2),
+              const Text(
+                'Thanh toán',
+                style: TextStyle(fontSize: 13, color: Colors.grey),
+              ),
+              if (pendingPayments > 0) ...[
+                const SizedBox(height: 2),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showLogoutDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Đăng xuất'),
+          content: const Text('Bạn có chắc chắn muốn đăng xuất?'),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('Hủy'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+            TextButton(
+              child:
+                  const Text('Đăng xuất', style: TextStyle(color: Colors.red)),
+              onPressed: () async {
+                await FirebaseAuth.instance.signOut();
+                Navigator.of(context).pushAndRemoveUntil(
+                  MaterialPageRoute(builder: (_) => const LoginScreen()),
+                  (route) => false,
+                );
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
 }
 
 Widget _buildSalesRow(String label, String value) {
@@ -434,30 +669,4 @@ Widget _buildSalesRow(String label, String value) {
       ],
     ),
   );
-}
-
-class CustomBottomNavBar extends StatelessWidget {
-  final int currentIndex;
-  final ValueChanged<int> onTap;
-  const CustomBottomNavBar(
-      {super.key, required this.currentIndex, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return BottomNavigationBar(
-      currentIndex: currentIndex,
-      onTap: onTap,
-      selectedItemColor: const Color(0xFF2563EB),
-      unselectedItemColor: Colors.black,
-      items: const [
-        BottomNavigationBarItem(icon: Icon(Icons.apps), label: 'Trang chủ'),
-        BottomNavigationBarItem(icon: Icon(Icons.people), label: 'Khách hàng'),
-        BottomNavigationBarItem(
-            icon: Icon(Icons.card_giftcard), label: 'Đơn hàng'),
-        BottomNavigationBarItem(icon: Icon(Icons.bar_chart), label: 'KPI'),
-        BottomNavigationBarItem(icon: Icon(Icons.menu), label: 'Thêm'),
-      ],
-      type: BottomNavigationBarType.fixed,
-    );
-  }
 }

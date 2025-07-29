@@ -23,11 +23,8 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
         return CustomerForm(
           customer: customer,
           onSave: (savedCustomer) async {
-            if (doc == null) {
-              await FirebaseFirestore.instance
-                  .collection('customers')
-                  .add(savedCustomer.toMap());
-            } else {
+            if (doc != null) {
+              // Chỉ cập nhật khi edit
               await FirebaseFirestore.instance
                   .collection('customers')
                   .doc(doc.id)

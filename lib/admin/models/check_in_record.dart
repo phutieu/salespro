@@ -1,5 +1,6 @@
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:salespro/admin/models/user.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class CheckInRecord {
   final User user;
@@ -22,10 +23,15 @@ class CheckInRecord {
           ? User.fromMap(map['user'])
           : User.fromMap({}),
       checkInTime: map['checkInTime'] != null
-          ? DateTime.tryParse(map['checkInTime']) ?? DateTime.now()
+          ? (map['checkInTime'] is Timestamp
+              ? (map['checkInTime'] as Timestamp).toDate()
+              : DateTime.tryParse(map['checkInTime'].toString()) ??
+                  DateTime.now())
           : DateTime.now(),
       checkOutTime: map['checkOutTime'] != null && map['checkOutTime'] != ''
-          ? DateTime.tryParse(map['checkOutTime'])
+          ? (map['checkOutTime'] is Timestamp
+              ? (map['checkOutTime'] as Timestamp).toDate()
+              : DateTime.tryParse(map['checkOutTime'].toString()))
           : null,
       location: map['location'] is Map<String, dynamic>
           ? LatLng(

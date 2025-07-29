@@ -1,6 +1,7 @@
 import 'package:salespro/admin/models/customer.dart';
 import 'package:salespro/admin/models/order_item.dart';
 import 'package:salespro/admin/models/payment.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 enum OrderStatus { Pending, Confirmed, Delivered, Cancelled }
 
@@ -50,18 +51,24 @@ class Order {
           ? Customer.fromMap({
               ...map['customer'],
               'id': map['customerId'] ?? map['customer']['id'] ?? '',
+              'storeName': map['customer']['storeName'] ?? '',
+              'address': map['customer']['address'] ?? '',
+              'contactPerson': map['customer']['contactPerson'] ?? '',
+              'phoneNumber': map['customer']['phoneNumber'] ?? '',
+              'area': map['customer']['area'] ?? '',
             })
-          : Customer.fromMap({'id': map['customerId'] ?? ''}),
+          : Customer.fromMap({
+              'id': map['customerId'] ?? '',
+              'storeName': '',
+              'address': '',
+              'contactPerson': '',
+              'phoneNumber': '',
+              'area': '',
+            }),
       items: (map['items'] as List<dynamic>? ?? [])
           .map((item) => item is Map<String, dynamic>
-              ? OrderItem.fromMap({
-                  ...item,
-                  'productId': item['productId'] ?? '', // Đảm bảo lấy productId
-                  'id': item['productId'] ??
-                      item['id'] ??
-                      '', // Fallback sang id nếu không có productId
-                })
-              : OrderItem.fromMap({'id': ''}))
+              ? OrderItem.fromMap(item)
+              : OrderItem.fromMap({}))
           .toList(),
       payments: (map['payments'] as List<dynamic>? ?? [])
           .map((p) => p is Map<String, dynamic>
@@ -69,7 +76,10 @@ class Order {
               : Payment.fromMap({}))
           .toList(),
       orderDate: map['orderDate'] != null
-          ? DateTime.tryParse(map['orderDate']) ?? DateTime.now()
+          ? (map['orderDate'] is Timestamp
+              ? (map['orderDate'] as Timestamp).toDate()
+              : DateTime.tryParse(map['orderDate'].toString()) ??
+                  DateTime.now())
           : DateTime.now(),
       status: OrderStatus.values.firstWhere(
         (e) => e.toString() == 'OrderStatus.' + (map['status'] ?? 'Pending'),

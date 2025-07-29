@@ -102,23 +102,63 @@ class _ProductFormState extends State<ProductForm> {
           child: const Text('Save'),
           onPressed: () async {
             if (_formKey.currentState!.validate()) {
-              final newProduct = Product(
-                id: widget.product?.id ?? '',
-                name: _nameController.text,
-                description: _descriptionController.text,
-                unit: _unitController.text,
-                salePrice: double.tryParse(_salePriceController.text) ?? 0,
-                purchasePrice:
-                    double.tryParse(_purchasePriceController.text) ?? 0,
-                stockQuantity: int.tryParse(_stockQuantityController.text) ?? 0,
-                category: _categoryController.text,
-              );
-              await widget.onSave(newProduct);
+              if (widget.product == null) {
+                // Tạo sản phẩm mới với id tự động P001, P002...
+                final newId = await _generateNextProductId();
+                final newProduct = Product(
+                  id: newId,
+                  name: _nameController.text,
+                  description: _descriptionController.text,
+                  unit: _unitController.text,
+                  salePrice: double.tryParse(_salePriceController.text) ?? 0,
+                  purchasePrice:
+                      double.tryParse(_purchasePriceController.text) ?? 0,
+                  stockQuantity:
+                      int.tryParse(_stockQuantityController.text) ?? 0,
+                  category: _categoryController.text,
+                );
+                await FirebaseFirestore.instance
+                    .collection('products')
+                    .doc(newId)
+                    .set(newProduct.toMap());
+                widget.onSave(newProduct);
+              } else {
+                // Sửa sản phẩm cũ
+                final updatedProduct = Product(
+                  id: widget.product!.id,
+                  name: _nameController.text,
+                  description: _descriptionController.text,
+                  unit: _unitController.text,
+                  salePrice: double.tryParse(_salePriceController.text) ?? 0,
+                  purchasePrice:
+                      double.tryParse(_purchasePriceController.text) ?? 0,
+                  stockQuantity:
+                      int.tryParse(_stockQuantityController.text) ?? 0,
+                  category: _categoryController.text,
+                );
+                await FirebaseFirestore.instance
+                    .collection('products')
+                    .doc(updatedProduct.id)
+                    .update(updatedProduct.toMap());
+                widget.onSave(updatedProduct);
+              }
               Navigator.of(context).pop();
             }
           },
         ),
       ],
     );
+  }
+
+  Future<String> _generateNextProductId() async {
+    final snapshot = await FirebaseFirestore.instance
+        .collection('products')
+        .orderBy('id', descending: true)
+        .limit(1)
+        .get();
+    if (snapshot.docs.isEmpty) return 'P001';
+    final lastId = snapshot.docs.first['id'] as String;
+    final number = int.tryParse(lastId.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
+    return 'P' + (number + 1).toString().padLeft(3, '0');
   }
 }

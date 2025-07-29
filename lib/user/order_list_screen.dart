@@ -6,6 +6,8 @@ import 'home_screen.dart';
 import 'customer_list_screen.dart';
 import 'checkout_screen.dart';
 import 'package:salespro/admin/models/order_item.dart';
+import 'screens/orthers_scren.dart';
+import 'kpi_screen.dart';
 
 class KPIScreen extends StatelessWidget {
   const KPIScreen({super.key});
@@ -48,10 +50,10 @@ class _OrderListScreenState extends State<OrderListScreen> {
         screen = const OrderListScreen();
         break;
       case 3:
-        screen = const KPIScreen();
+        screen = const OrdersScreen();
         break;
       case 4:
-        screen = const MoreScreen();
+        screen = const KpiScreen();
         break;
       default:
         screen = const HomeScreen();
@@ -247,31 +249,37 @@ class _OrderListScreenState extends State<OrderListScreen> {
                                     borderRadius: BorderRadius.circular(24)),
                               ),
                               onPressed: () {
-                                final orderItems = <OrderItem>[];
+                                final cartItems = <Map<String, dynamic>>[];
                                 for (final entry in _quantities.entries) {
                                   if (entry.value > 0) {
-                                    final doc = docs.firstWhere((d) => d.id == entry.key);
-                                    final data = doc.data() as Map<String, dynamic>;
-                                    orderItems.add(OrderItem(
-                                      id: doc.id,
-                                      name: data['name'] ?? '',
-                                      price: (data['salePrice'] ?? 0).toDouble(),
-                                      quantity: entry.value,
-                                      unit: _units[doc.id] ?? data['unit'] ?? 'HỘP',
-                                    ));
+                                    final doc = docs
+                                        .firstWhere((d) => d.id == entry.key);
+                                    final data =
+                                        doc.data() as Map<String, dynamic>;
+                                    cartItems.add({
+                                      'id': doc.id,
+                                      'name': data['name'],
+                                      'price': data['salePrice'],
+                                      'quantity': entry.value,
+                                      'unit': _units[doc.id] ??
+                                          data['unit'] ??
+                                          'HỘP',
+                                    });
                                   }
                                 }
-                                if (orderItems.isEmpty) {
+                                if (cartItems.isEmpty) {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     const SnackBar(
-                                      content: Text('Vui lòng chọn ít nhất 1 sản phẩm!'),
+                                      content: Text(
+                                          'Vui lòng chọn ít nhất 1 sản phẩm!'),
                                     ),
                                   );
                                   return;
                                 }
                                 Navigator.of(context).push(
                                   MaterialPageRoute(
-                                    builder: (_) => CheckoutScreen(items: orderItems),
+                                    builder: (_) =>
+                                        CheckoutScreen(cartItems: cartItems),
                                   ),
                                 );
                               },
@@ -305,5 +313,4 @@ class _OrderListScreenState extends State<OrderListScreen> {
       ),
     );
   }
-}
 }

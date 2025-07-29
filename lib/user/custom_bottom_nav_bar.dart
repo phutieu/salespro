@@ -17,9 +17,10 @@ class CustomBottomNavBar extends StatelessWidget {
         BottomNavigationBarItem(icon: Icon(Icons.apps), label: 'Trang chủ'),
         BottomNavigationBarItem(icon: Icon(Icons.people), label: 'Khách hàng'),
         BottomNavigationBarItem(
-            icon: Icon(Icons.card_giftcard), label: 'Đơn hàng'),
+            icon: Icon(Icons.receipt_long), label: 'Sản phẩm'),
+        BottomNavigationBarItem(
+            icon: Icon(Icons.inventory_2), label: 'Đơn hàng'),
         BottomNavigationBarItem(icon: Icon(Icons.bar_chart), label: 'KPI'),
-        BottomNavigationBarItem(icon: Icon(Icons.menu), label: 'Thêm'),
       ],
       type: BottomNavigationBarType.fixed,
     );
